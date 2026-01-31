@@ -1,6 +1,6 @@
 # Micro-Country of Geniuses
 
-A local multi-agent AI system that operates like a small country of experts working together to solve complex problems.
+A **100% local** multi-agent AI system that operates like a small country of experts working together to solve complex problems. Runs entirely on your machine using [Ollama](https://ollama.ai) - no cloud APIs, no data sent externally, no API costs.
 
 ## What Is This?
 
@@ -13,6 +13,38 @@ Imagine having a team of AI experts at your disposal:
 - And many more specialists...
 
 This project creates that team using a local AI model (Ollama) and organizes them into "ministries" that work together.
+
+## Why Local Models?
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    100% LOCAL OPERATION                         │
+│                                                                 │
+│   Your Computer                                                 │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │                                                         │  │
+│   │   micro-country  ◄──────►  Ollama  ◄──────►  AI Model  │  │
+│   │   (this app)                (server)         (on disk)  │  │
+│   │                                                         │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│   ✓ No internet required after setup                           │
+│   ✓ No API keys needed                                         │
+│   ✓ No usage costs                                             │
+│   ✓ Complete privacy - your data never leaves your machine     │
+│   ✓ Works offline                                              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+| Cloud AI APIs | This Project (Local) |
+|---------------|----------------------|
+| Requires internet | Works offline |
+| Pay per token/request | Free after setup |
+| Data sent to servers | Data stays on your machine |
+| API keys & accounts | No accounts needed |
+| Rate limits | No limits |
+| Vendor lock-in | Use any Ollama model |
 
 ## Quick Start (5 Minutes)
 

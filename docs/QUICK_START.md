@@ -2,6 +2,14 @@
 
 Welcome! This guide will get you up and running with 10 hands-on examples in about 30 minutes. Each example builds on the previous one, so work through them in order.
 
+> **Note: 100% Local Operation**
+>
+> This system runs entirely on your machine using Ollama for local AI inference.
+> - No internet connection required (after initial model download)
+> - No API keys or cloud accounts needed
+> - No usage fees - completely free to use
+> - Your data never leaves your computer
+
 ## Before You Begin
 
 Make sure you have:

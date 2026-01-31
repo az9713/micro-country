@@ -76,9 +76,42 @@ The system is designed around these principles:
 
 1. **Separation of Concerns**: Each ministry has a specific responsibility
 2. **Single Source of Truth**: All shared data in one database
-3. **Local-First**: Everything runs on your machine
+3. **Local-First**: Everything runs on your machine (see below)
 4. **Evidence-Based**: Decisions backed by evidence, not opinion
 5. **Transparent Reasoning**: Every answer shows its thought process
+
+### Why 100% Local?
+
+This application uses **Ollama** for local LLM inference, meaning:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    LOCAL OPERATION MODEL                        │
+│                                                                 │
+│   ┌──────────────────────────────────────────────────────────┐ │
+│   │                  YOUR COMPUTER                            │ │
+│   │                                                           │ │
+│   │   User ──► Orchestrator ──► Ollama ──► AI Model          │ │
+│   │                 │                          │              │ │
+│   │                 ▼                          ▼              │ │
+│   │            SQLite DB              GPU/CPU Memory          │ │
+│   │                                                           │ │
+│   └──────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│   Nothing leaves your machine:                                  │
+│   • No API calls to external servers                           │
+│   • No data transmitted over the internet                      │
+│   • No cloud accounts or API keys required                     │
+│   • No usage fees or rate limits                               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Benefits**:
+- **Privacy**: Your code and queries stay on your machine
+- **Cost**: Free to use (no per-token charges)
+- **Availability**: Works offline after initial setup
+- **Control**: Choose any Ollama-compatible model
 
 ---
 

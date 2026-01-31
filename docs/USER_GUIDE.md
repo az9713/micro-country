@@ -17,7 +17,9 @@ Complete guide to using the Micro-Country of Geniuses system.
 
 ### What Is the Micro-Country?
 
-Think of the Micro-Country as a team of AI experts organized like a small government:
+Think of the Micro-Country as a team of AI experts organized like a small government.
+
+> **100% Local Operation**: This system runs entirely on your machine using Ollama for local AI inference. No internet required, no API costs, and your data never leaves your computer.
 
 - **Ministries** are departments with specific responsibilities
 - **Specialists** are experts within each ministry

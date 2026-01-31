@@ -2,6 +2,22 @@
 
 This guide walks you through every step of installing the Micro-Country of Geniuses system. No prior experience with Python or AI systems is required.
 
+## Local-First Design
+
+**This application runs 100% locally on your machine.** Unlike cloud-based AI services:
+
+| What This Means | Benefit |
+|-----------------|---------|
+| AI runs on your computer via Ollama | Complete privacy - data never leaves your machine |
+| No API keys required | No accounts to create or manage |
+| No per-request costs | Free to use after initial setup |
+| Works without internet | Use it offline (after downloading the model) |
+| You control the model | Switch models anytime, no vendor lock-in |
+
+The only time you need internet is during initial setup to download Python, Ollama, and the AI model.
+
+---
+
 ## Table of Contents
 
 1. [System Requirements](#system-requirements)
