@@ -325,7 +325,8 @@ class OllamaBridge:
         self,
         topic: str,
         participants: list[str],
-        max_rounds: int = 3,
+        max_rounds: int = 1,
+        progress_callback=None,
     ) -> dict:
         """
         Run a debate between specialists.
@@ -333,77 +334,97 @@ class OllamaBridge:
         Args:
             topic: What to debate
             participants: List of specialist names
-            max_rounds: Maximum debate rounds
+            max_rounds: Maximum debate rounds (default 1 for faster response)
+            progress_callback: Optional callback(message) for progress updates
 
         Returns:
             Debate result with positions and synthesis
         """
+        def progress(msg):
+            if progress_callback:
+                progress_callback(msg)
+            else:
+                print(msg, flush=True)
+
         positions = []
+        total_steps = len(participants) * max_rounds + 1  # +1 for synthesis
+        current_step = 0
 
         # Round 1: Each participant states their position
+        progress(f"\n[Round 1/{max_rounds}] Gathering initial positions...")
         for participant in participants:
-            prompt = f"""You are debating the following topic:
+            current_step += 1
+            progress(f"  [{current_step}/{total_steps}] {participant} is thinking...")
 
-{topic}
+            prompt = f"""Topic: {topic}
 
-State your position clearly with supporting arguments.
-Consider evidence types: EMPIRICAL > PRECEDENT > CONSENSUS > THEORETICAL > INTUITION
-"""
+State your position concisely (2-3 paragraphs max) with key arguments."""
+
             response = await self.generate(
                 prompt=prompt,
                 specialist=participant,
             )
             positions.append({
-                "specialist": participant,
+                "participant": participant,
                 "position": response,
                 "round": 1,
             })
+            progress(f"  [{current_step}/{total_steps}] {participant} done.")
 
-        # Round 2+: Critique and refine
+        # Round 2+: Critique and refine (if more rounds requested)
         for round_num in range(2, max_rounds + 1):
-            positions_text = "\n\n".join(
-                f"**{p['specialist']}**: {p['position']}"
+            progress(f"\n[Round {round_num}/{max_rounds}] Critique and refine...")
+            positions_text = "\n".join(
+                f"- {p['participant']}: {p['position'][:200]}..."
                 for p in positions
                 if p["round"] == round_num - 1
             )
 
             for participant in participants:
-                prompt = f"""Debate topic: {topic}
+                current_step += 1
+                progress(f"  [{current_step}/{total_steps}] {participant} refining...")
 
-Previous positions:
+                prompt = f"""Topic: {topic}
+
+Previous positions (summarized):
 {positions_text}
 
-Critique the other positions and refine your own based on valid points raised.
-"""
+Briefly critique others and refine your position (2 paragraphs max)."""
+
                 response = await self.generate(
                     prompt=prompt,
                     specialist=participant,
                 )
                 positions.append({
-                    "specialist": participant,
+                    "participant": participant,
                     "position": response,
                     "round": round_num,
                 })
+                progress(f"  [{current_step}/{total_steps}] {participant} done.")
 
         # Final synthesis
-        all_positions = "\n\n".join(
-            f"**{p['specialist']}** (Round {p['round']}): {p['position']}"
+        current_step += 1
+        progress(f"\n[Synthesis] Creating final summary...")
+        progress(f"  [{current_step}/{total_steps}] Synthesizing all positions...")
+
+        final_positions = "\n".join(
+            f"- {p['participant']}: {p['position'][:300]}"
             for p in positions
+            if p["round"] == max_rounds
         )
 
-        synthesis_prompt = f"""Debate topic: {topic}
+        synthesis_prompt = f"""Topic: {topic}
 
-All positions from the debate:
-{all_positions}
+Final positions:
+{final_positions}
 
-Synthesize the strongest arguments into a final recommendation.
-Note points of agreement and remaining disagreements.
-"""
+Provide a brief synthesis (3-4 sentences): key agreements, disagreements, and recommendation."""
 
         synthesis = await self.generate(
             prompt=synthesis_prompt,
-            specialist="architect",  # Use architect for synthesis
+            specialist="architect",
         )
+        progress(f"  [{current_step}/{total_steps}] Synthesis complete!")
 
         return {
             "topic": topic,
@@ -432,33 +453,23 @@ Note points of agreement and remaining disagreements.
         Returns:
             Review result with verdict and issues
         """
-        prompt = f"""## Adversarial Review
+        # Truncate output if too long for faster processing
+        output_preview = output[:500] + "..." if len(output) > 500 else output
 
-You are the skeptic. Your job is to find problems with this output.
+        prompt = f"""Review this {output_type} critically.
 
-### Output Type: {output_type}
+Context: {context}
 
-### Context
-{context}
+Output:
+{output_preview}
 
-### Output to Review
-{output}
-
-### Your Task
-
-1. **Find Flaws**: What's wrong with this output?
-2. **Challenge Assumptions**: What assumptions were made? Are they valid?
-3. **Identify Risks**: What could go wrong if we use this?
-4. **Check Completeness**: What's missing?
-5. **Verify Claims**: Are all claims supported by evidence?
-
-Rate the output: [ACCEPT / NEEDS_REVISION / REJECT]
+Verdict: ACCEPT, NEEDS_REVISION, or REJECT
 
 Issues found:
-- [List each issue]
+- (list issues briefly)
 
 Recommended changes:
-- [List specific improvements]
+- (list fixes briefly)
 """
 
         response = await self.generate(

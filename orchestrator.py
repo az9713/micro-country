@@ -317,25 +317,28 @@ class Orchestrator:
         self,
         topic: str,
         participants: list[str] = None,
+        max_rounds: int = 1,
     ) -> dict:
         """
         Coordinate a debate between specialists.
 
         Args:
             topic: The topic to debate
-            participants: List of specialist names (default: architect, coder, tester)
+            participants: List of specialist names (default: architect, coder)
+            max_rounds: Number of debate rounds (default: 1 for faster response)
 
         Returns:
             Debate result with synthesis
         """
         if participants is None:
-            participants = ["architect", "coder", "tester"]
+            # Use 2 participants by default for faster debates
+            participants = ["architect", "coder"]
 
         async with self.ollama:
             result = await self.ollama.debate(
                 topic=topic,
                 participants=participants,
-                max_rounds=3,
+                max_rounds=max_rounds,
             )
 
         return result
@@ -450,10 +453,23 @@ class Orchestrator:
                 if user_input.startswith("/debate "):
                     topic = user_input[8:].strip()
                     print(f"\nStarting debate on: {topic}")
-                    print("Participants: architect, coder, tester\n")
+                    print("Participants: architect, coder")
+                    print("(Progress will be shown as each participant responds)")
                     result = await self.coordinate_debate(topic)
-                    print("\n--- Debate Synthesis ---")
-                    print(result["synthesis"])
+
+                    # Display individual positions
+                    print("\n" + "=" * 50)
+                    print("DEBATE POSITIONS")
+                    print("=" * 50)
+                    for pos in result.get("positions", []):
+                        print(f"\n--- {pos.get('participant', 'unknown')} (Round {pos.get('round', 1)}) ---")
+                        print(pos.get("position", ""))
+
+                    # Display synthesis
+                    print("\n" + "=" * 50)
+                    print("SYNTHESIS")
+                    print("=" * 50)
+                    print(result.get("synthesis", "No synthesis available"))
 
                 elif user_input.startswith("/review "):
                     text = user_input[8:].strip()
@@ -488,7 +504,9 @@ class Orchestrator:
                 print("\n\nInterrupted. Goodbye!")
                 break
             except Exception as e:
+                import traceback
                 print(f"\nError: {e}")
+                traceback.print_exc()
 
 
 async def main():

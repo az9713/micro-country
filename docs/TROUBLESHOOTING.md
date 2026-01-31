@@ -343,20 +343,35 @@ Unknown ministry: xyz
 
 ---
 
-### Debate Never Ends
+### Debate Takes Too Long / Timeout
 
-**Symptom**: `/debate` command runs for a very long time.
+**Symptom**: `/debate` command times out or runs for a very long time.
 
-**Cause**: Specialists keep disagreeing, reaching max rounds.
+**Cause**: Debates involve multiple sequential LLM calls. With slow models, this compounds.
 
-**Solution**:
-1. Press `Ctrl+C` to cancel
-2. Try a more specific debate topic
-3. Reduce debate rounds in config.yaml:
-   ```yaml
-   debate:
-     max_rounds: 2  # Default is 3
+**Expected timing** (with GPU-accelerated model):
+- Simple request: 5-15 seconds
+- Debate (2 participants, 1 round): 30-60 seconds
+- Debate (3 participants, 3 rounds): 3-5 minutes
+
+**Solutions**:
+
+1. **Use a faster model** that fits in GPU (see GPU/VRAM section above)
+
+2. **Watch for progress** - the system now shows progress like:
    ```
+   [Round 1/1] Gathering initial positions...
+     [1/3] architect is thinking...
+     [1/3] architect done.
+   ```
+
+3. **Increase timeout** in config.yaml if needed:
+   ```yaml
+   ollama:
+     timeout: 300  # 5 minutes
+   ```
+
+4. Press `Ctrl+C` to cancel if stuck
 
 ---
 
@@ -378,16 +393,69 @@ json.decoder.JSONDecodeError: Expecting value
 
 ## Performance Problems
 
+### GPU/VRAM Requirements (IMPORTANT)
+
+**The model must fit in your GPU's VRAM for fast inference.**
+
+| GPU VRAM | Recommended Model | Size |
+|----------|-------------------|------|
+| 4 GB | mistral:7b, llama3.2 | 2-4 GB |
+| 6-8 GB | qwen2.5:7b, deepseek-r1:7b | 4-5 GB |
+| 12+ GB | qwen2.5:14b, larger models | 8-14 GB |
+
+**Check your GPU VRAM**:
+```bash
+# Windows/Linux with NVIDIA
+nvidia-smi
+
+# Look for "Memory-Usage" column
+```
+
+**If model is larger than VRAM**:
+- Model runs partially on CPU = VERY SLOW (4-5 tokens/sec)
+- Use a smaller model that fits entirely in VRAM
+
+**Example**: RTX 3050 (4GB VRAM) cannot run a 13GB model efficiently.
+
+---
+
+### Other Applications Using GPU
+
+**Symptom**: Slow responses even with adequate GPU.
+
+**Cause**: Other apps (LM Studio, games, video editors) using GPU memory.
+
+**Solution**:
+```bash
+# Check what's using GPU (Windows/Linux)
+nvidia-smi
+
+# Close other GPU-intensive applications
+# Especially: LM Studio, CUDA applications, games
+```
+
+---
+
 ### Very Slow Responses
 
 **Possible Causes and Solutions**:
 
 | Cause | Solution |
 |-------|----------|
-| Large model | Use smaller model (qwen2.5:7b) |
+| Model too large for GPU | Use smaller model (mistral:7b) |
+| Other apps using GPU | Close LM Studio, games, etc. |
 | Insufficient RAM | Close other applications |
-| No GPU acceleration | Enable GPU if available |
+| No GPU acceleration | Install CUDA drivers |
 | Complex request | Break into smaller parts |
+
+**Quick diagnosis**:
+```bash
+# Test model speed directly
+ollama run mistral:7b "Say hello" --verbose
+
+# Look for "eval rate" - should be 15+ tokens/sec with GPU
+# If under 5 tokens/sec, model is running on CPU
+```
 
 **Check system resources**:
 

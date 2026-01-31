@@ -8,7 +8,7 @@ ollama:
   #   - llama3.2:latest (2 GB, faster)
   #   - granite3.3:latest (5 GB, good for coding)
   #   - deepseek-r1:7b (5 GB, good for reasoning)
-  timeout: 120  # seconds
+  timeout: 300  # seconds (increased for debate/multi-call operations)
 
 # Database settings
 database:

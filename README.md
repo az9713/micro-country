@@ -131,6 +131,20 @@ When specialists disagree, evidence decides:
 - **RAM**: 16GB minimum (32GB recommended)
 - **Disk**: 20GB free space (for AI model)
 - **Python**: 3.11 or higher
+- **GPU**: Recommended for fast inference (see below)
+
+### GPU/Model Sizing Guide
+
+For best performance, choose a model that fits in your GPU's VRAM:
+
+| GPU VRAM | Recommended Model | Expected Speed |
+|----------|-------------------|----------------|
+| 4 GB | mistral:7b | ~15-20 tokens/sec |
+| 6-8 GB | qwen2.5:7b | ~20-30 tokens/sec |
+| 12+ GB | qwen2.5:14b | ~15-25 tokens/sec |
+| No GPU | llama3.2 (2GB) | ~5-10 tokens/sec |
+
+**Important**: If your model is larger than your GPU's VRAM, it will run mostly on CPU and be very slow (4-5 tokens/sec). Use a smaller model for better performance.
 
 ## Getting Help
 
