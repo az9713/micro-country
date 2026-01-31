@@ -6,11 +6,13 @@ Deep dive into the system architecture of the Micro-Country of Geniuses.
 
 1. [System Overview](#system-overview)
 2. [Component Architecture](#component-architecture)
-3. [Data Flow](#data-flow)
-4. [The Genius Protocol](#the-genius-protocol)
-5. [The Evidence Court](#the-evidence-court)
-6. [Database Design](#database-design)
-7. [Design Decisions](#design-decisions)
+3. [Ollama Integration](#ollama-integration)
+4. [How Ollama Works in This Application](#how-ollama-works-in-this-application)
+5. [Data Flow](#data-flow)
+6. [The Genius Protocol](#the-genius-protocol)
+7. [The Evidence Court](#the-evidence-court)
+8. [Database Design](#database-design)
+9. [Design Decisions](#design-decisions)
 
 ---
 
@@ -243,6 +245,128 @@ class SomeMinistry:
 **Location**: `bridge/ollama_bridge.py`
 
 **Purpose**: Interface with local LLM via Ollama's HTTP API
+
+---
+
+## Ollama Integration
+
+### Overview: How Ollama Fits In
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        USER                                      │
+│                          │                                       │
+│                          ▼                                       │
+│                   ┌─────────────┐                                │
+│                   │ orchestrator│  (orchestrator.py)             │
+│                   │    .py      │                                │
+│                   └──────┬──────┘                                │
+│                          │                                       │
+│                          ▼                                       │
+│                   ┌─────────────┐                                │
+│                   │   Ollama    │  (bridge/ollama_bridge.py)     │
+│                   │   Bridge    │                                │
+│                   └──────┬──────┘                                │
+│                          │ HTTP requests                         │
+│                          ▼                                       │
+│                   ┌─────────────┐                                │
+│                   │   Ollama    │  (localhost:11434)             │
+│                   │   Server    │                                │
+│                   └──────┬──────┘                                │
+│                          │                                       │
+│                          ▼                                       │
+│                   ┌─────────────┐                                │
+│                   │  LLM Model  │  (mistral:7b, etc.)            │
+│                   │   (GPU/CPU) │                                │
+│                   └─────────────┘                                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### The Components
+
+**1. Configuration (`config.yaml`)**
+
+```yaml
+ollama:
+  host: "http://localhost:11434"   # Ollama API endpoint
+  model: "mistral:7b"              # Which model to use
+  timeout: 300                      # Request timeout in seconds
+```
+
+**2. OllamaConfig (Data Class)**
+
+```python
+@dataclass
+class OllamaConfig:
+    host: str = "http://localhost:11434"
+    model: str = "qwen2.5:14b"
+    timeout: int = 120
+    temperature: float = 0.7       # Creativity (0=deterministic, 1=creative)
+    num_ctx: int = 8192            # Context window size (tokens)
+```
+
+**3. OllamaBridge (Main Class)**
+
+The bridge is the interface between your application and Ollama's HTTP API.
+
+| Method | Purpose | Ollama Endpoint |
+|--------|---------|-----------------|
+| `check_connection()` | Verify Ollama is running | `GET /api/tags` |
+| `list_models()` | Get available models | `GET /api/tags` |
+| `generate()` | Single prompt → response | `POST /api/generate` |
+| `generate_stream()` | Streaming response | `POST /api/generate` (stream=true) |
+| `chat()` | Multi-turn conversation | `POST /api/chat` |
+| `debate()` | Multi-specialist debate | Multiple `generate()` calls |
+| `adversarial_review()` | Critical review | Single `generate()` call |
+
+### The HTTP Client
+
+The bridge uses `httpx.AsyncClient` for async HTTP requests with a context manager pattern:
+
+```python
+class OllamaBridge:
+    async def __aenter__(self):
+        self._client = httpx.AsyncClient(timeout=self.config.timeout)
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self._client:
+            await self._client.aclose()
+```
+
+Usage pattern:
+```python
+async with OllamaBridge(config) as bridge:
+    response = await bridge.generate("Hello")
+```
+
+### Progress Callbacks (for Long Operations)
+
+For operations like `debate()` that make multiple LLM calls, progress callbacks provide feedback:
+
+```python
+async def debate(self, topic, participants, progress_callback=None):
+    def progress(msg):
+        if progress_callback:
+            progress_callback(msg)
+        else:
+            print(msg, flush=True)
+
+    progress(f"[Round 1/{max_rounds}] Gathering positions...")
+    for participant in participants:
+        progress(f"  {participant} is thinking...")
+        # ... make LLM call ...
+        progress(f"  {participant} done.")
+```
+
+This produces output like:
+```
+[Round 1/1] Gathering initial positions...
+  [1/3] architect is thinking...
+  [1/3] architect done.
+  [2/3] coder is thinking...
+  [2/3] coder done.
+```
 
 ---
 
