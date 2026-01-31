@@ -242,31 +242,350 @@ class SomeMinistry:
 
 **Location**: `bridge/ollama_bridge.py`
 
-**Purpose**: Interface with local LLM
+**Purpose**: Interface with local LLM via Ollama's HTTP API
 
-**Key Methods**:
+---
+
+## How Ollama Works in This Application
+
+### What is Ollama?
+
+Ollama is a local LLM inference server that:
+1. Downloads and manages AI models on your machine
+2. Loads models into GPU/CPU memory
+3. Exposes a REST API for generating text
+4. Handles all the complex ML inference internally
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         YOUR COMPUTER                               │
+│                                                                     │
+│  ┌─────────────────────┐          ┌─────────────────────────────┐  │
+│  │   micro-country     │   HTTP   │         OLLAMA              │  │
+│  │   (Python app)      │ ◄──────► │        SERVER               │  │
+│  │                     │  :11434  │                             │  │
+│  │  • Orchestrator     │          │  • Model Manager            │  │
+│  │  • Ollama Bridge    │          │  • Inference Engine         │  │
+│  │  • Genius Protocol  │          │  • GPU/CPU Scheduler        │  │
+│  └─────────────────────┘          └──────────────┬──────────────┘  │
+│                                                  │                  │
+│                                   ┌──────────────▼──────────────┐  │
+│                                   │      AI MODEL (e.g.         │  │
+│                                   │       mistral:7b)           │  │
+│                                   │                             │  │
+│                                   │  Loaded in GPU VRAM         │  │
+│                                   │  or System RAM              │  │
+│                                   └─────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Communication Flow Overview
+
+```
+┌──────────────┐                ┌──────────────┐              ┌──────────────┐
+│     USER     │                │ ORCHESTRATOR │              │    OLLAMA    │
+│              │                │              │              │    SERVER    │
+└──────┬───────┘                └──────┬───────┘              └──────┬───────┘
+       │                               │                             │
+       │  1. "Write hello world"       │                             │
+       │──────────────────────────────►│                             │
+       │                               │                             │
+       │                               │  2. Build prompt with       │
+       │                               │     Genius Protocol         │
+       │                               │     + specialist context    │
+       │                               │                             │
+       │                               │  3. HTTP POST /api/generate │
+       │                               │─────────────────────────────►
+       │                               │     {                       │
+       │                               │       "model": "mistral:7b",│
+       │                               │       "prompt": "...",      │
+       │                               │       "stream": false       │
+       │                               │     }                       │
+       │                               │                             │
+       │                               │              4. Model loads │
+       │                               │                 (if needed) │
+       │                               │                             │
+       │                               │              5. Generate    │
+       │                               │                 tokens      │
+       │                               │                             │
+       │                               │  6. HTTP Response           │
+       │                               │◄─────────────────────────────
+       │                               │     {                       │
+       │                               │       "response": "...",    │
+       │                               │       "done": true          │
+       │                               │     }                       │
+       │                               │                             │
+       │                               │  7. Parse response,         │
+       │                               │     extract reasoning       │
+       │                               │                             │
+       │  8. Display result            │                             │
+       │◄──────────────────────────────│                             │
+       │                               │                             │
+```
+
+### The Ollama Bridge Class
 
 ```python
 class OllamaBridge:
-    async def generate(self, prompt, specialist=None):
-        """Generate text response."""
-        pass
+    """
+    Async HTTP client for Ollama API.
+    Handles all LLM communication for the application.
+    """
 
-    async def generate_with_reasoning(self, prompt, specialist):
-        """Generate with parsed reasoning trace."""
-        pass
+    def __init__(self, config: OllamaConfig, genius: GeniusProtocol):
+        self.config = config      # host, model, timeout
+        self.genius = genius      # For building prompts
+        self._client = None       # httpx.AsyncClient
 
-    async def chat(self, messages, tools=None):
-        """Multi-turn conversation with tool support."""
-        pass
+    # Context manager for connection lifecycle
+    async def __aenter__(self):
+        self._client = httpx.AsyncClient(timeout=self.config.timeout)
+        return self
 
-    async def debate(self, topic, participants):
-        """Run a debate between specialists."""
-        pass
+    async def __aexit__(self, ...):
+        await self._client.aclose()
+```
 
-    async def adversarial_review(self, output, context):
-        """Get critical review of output."""
-        pass
+### API Endpoints Used
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    OLLAMA REST API (localhost:11434)                │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  GET  /api/tags                                                     │
+│       └─► List available models                                     │
+│           Used by: check_connection(), list_models()                │
+│                                                                     │
+│  POST /api/generate                                                 │
+│       └─► Generate text from prompt                                 │
+│           Used by: generate(), debate(), adversarial_review()       │
+│           Body: { "model": "...", "prompt": "...", "stream": false }│
+│                                                                     │
+│  POST /api/chat                                                     │
+│       └─► Multi-turn conversation with tool support                 │
+│           Used by: chat()                                           │
+│           Body: { "model": "...", "messages": [...], "tools": [...]}│
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Simple Generate Flow
+
+```
+                    generate(prompt, specialist="coder")
+                                    │
+                                    ▼
+┌───────────────────────────────────────────────────────────────────┐
+│                    PROMPT CONSTRUCTION                            │
+│                                                                   │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ SYSTEM PROMPT (from genius/prompts/base_genius.txt)         │ │
+│  │ "You are a genius specialist. Follow the 7-step protocol..."│ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                              +                                    │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ SPECIALIST PROMPT (from genius/prompts/coder.txt)           │ │
+│  │ "You are the Coder genius. Your expertise includes..."      │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                              +                                    │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ USER REQUEST                                                 │ │
+│  │ "Write hello world in Python"                                │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                              +                                    │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ REASONING TEMPLATE                                           │ │
+│  │ "Structure your response with: 1.OBSERVE 2.THINK..."        │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                              =                                    │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ FINAL PROMPT (sent to Ollama)                                │ │
+│  │ ~500-1000 tokens                                             │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└───────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌───────────────────────────────────────────────────────────────────┐
+│                    HTTP REQUEST TO OLLAMA                         │
+│                                                                   │
+│  POST http://localhost:11434/api/generate                         │
+│  Content-Type: application/json                                   │
+│                                                                   │
+│  {                                                                │
+│    "model": "mistral:7b",                                         │
+│    "prompt": "[full constructed prompt]",                         │
+│    "stream": false,                                               │
+│    "options": {                                                   │
+│      "temperature": 0.7,                                          │
+│      "num_ctx": 8192                                              │
+│    }                                                              │
+│  }                                                                │
+└───────────────────────────────────────────────────────────────────┘
+                                    │
+                            (model processes)
+                                    │
+                                    ▼
+┌───────────────────────────────────────────────────────────────────┐
+│                    HTTP RESPONSE FROM OLLAMA                      │
+│                                                                   │
+│  {                                                                │
+│    "model": "mistral:7b",                                         │
+│    "response": "### 1. OBSERVE\nThe user wants...\n\n### 2...",  │
+│    "done": true,                                                  │
+│    "total_duration": 5234000000,                                  │
+│    "eval_count": 250,                                             │
+│    "eval_duration": 4500000000                                    │
+│  }                                                                │
+└───────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+                         Return response text
+```
+
+### Debate Flow (Multiple Ollama Calls)
+
+```
+                    debate(topic, participants=["architect", "coder"])
+                                    │
+                                    ▼
+┌───────────────────────────────────────────────────────────────────┐
+│                    ROUND 1: INITIAL POSITIONS                     │
+│                                                                   │
+│   ┌─────────────────┐         ┌─────────────────┐                │
+│   │ Call 1: architect│         │ Call 2: coder   │                │
+│   │ "State position │         │ "State position │                │
+│   │  on topic..."   │         │  on topic..."   │                │
+│   └────────┬────────┘         └────────┬────────┘                │
+│            │                           │                          │
+│            ▼                           ▼                          │
+│   ┌─────────────────┐         ┌─────────────────┐                │
+│   │ POST /api/generate        │ POST /api/generate               │
+│   │ specialist=architect      │ specialist=coder                 │
+│   └────────┬────────┘         └────────┬────────┘                │
+│            │                           │                          │
+│            ▼                           ▼                          │
+│   ┌─────────────────┐         ┌─────────────────┐                │
+│   │ Position 1      │         │ Position 2      │                │
+│   │ (with 7 steps)  │         │ (with 7 steps)  │                │
+│   └────────┬────────┘         └────────┬────────┘                │
+│            │                           │                          │
+│            └───────────┬───────────────┘                          │
+│                        ▼                                          │
+│              Collect all positions                                │
+└───────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌───────────────────────────────────────────────────────────────────┐
+│                    SYNTHESIS                                      │
+│                                                                   │
+│   ┌─────────────────────────────────────────────────────────┐    │
+│   │ Call 3: architect (as synthesizer)                       │    │
+│   │ "Given these positions, synthesize key agreements,       │    │
+│   │  disagreements, and recommendation..."                   │    │
+│   └────────────────────────┬────────────────────────────────┘    │
+│                            │                                      │
+│                            ▼                                      │
+│                  POST /api/generate                               │
+│                            │                                      │
+│                            ▼                                      │
+│                  Synthesis response                               │
+└───────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+                    Return { positions, synthesis }
+
+Total Ollama calls: 3 (2 participants + 1 synthesis)
+With 3 participants and 3 rounds: 3×3 + 1 = 10 calls
+```
+
+### Model Loading and Memory
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    MODEL LIFECYCLE IN OLLAMA                        │
+└─────────────────────────────────────────────────────────────────────┘
+
+    First Request                    Subsequent Requests
+    ─────────────                    ────────────────────
+         │                                   │
+         ▼                                   ▼
+┌─────────────────┐                 ┌─────────────────┐
+│ Model on disk   │                 │ Model in memory │
+│ (~4GB file)     │                 │ (already loaded)│
+└────────┬────────┘                 └────────┬────────┘
+         │                                   │
+         │ Load into                         │ Immediate
+         │ GPU VRAM                          │
+         │ (5-15 sec)                        │
+         ▼                                   ▼
+┌─────────────────┐                 ┌─────────────────┐
+│ Generate tokens │                 │ Generate tokens │
+│ (~15-30 tok/sec)│                 │ (~15-30 tok/sec)│
+└────────┬────────┘                 └────────┬────────┘
+         │                                   │
+         ▼                                   ▼
+┌─────────────────┐                 ┌─────────────────┐
+│ Model stays in  │                 │ Model stays in  │
+│ memory for      │                 │ memory          │
+│ ~5 minutes      │                 │                 │
+└─────────────────┘                 └─────────────────┘
+
+Note: If model is larger than GPU VRAM, it runs on CPU
+      which is 3-5x slower (~4-5 tokens/sec)
+```
+
+### Error Handling
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    ERROR SCENARIOS                                  │
+└─────────────────────────────────────────────────────────────────────┘
+
+  Scenario                  Error                    Solution
+  ────────────────────────────────────────────────────────────────────
+  Ollama not running        ConnectionRefused        ollama serve
+  Model not downloaded      Model not found          ollama pull model
+  Request too long          ReadTimeout              Increase timeout
+  GPU out of memory         CUDA OOM                 Use smaller model
+  Invalid model name        Model not found          Check ollama list
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                    TIMEOUT CONFIGURATION                            │
+│                                                                     │
+│  config.yaml:                                                       │
+│    ollama:                                                          │
+│      timeout: 300  # seconds                                        │
+│                                                                     │
+│  This affects httpx.AsyncClient timeout for all Ollama calls        │
+│  Increase if seeing ReadTimeout errors on slow hardware             │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Methods Summary
+
+```python
+class OllamaBridge:
+    async def check_connection(self) -> bool:
+        """GET /api/tags - verify Ollama is running"""
+
+    async def list_models(self) -> list[str]:
+        """GET /api/tags - list available models"""
+
+    async def generate(self, prompt, specialist=None) -> str:
+        """POST /api/generate - single text generation"""
+
+    async def generate_with_reasoning(self, prompt, specialist) -> tuple:
+        """generate() + parse 7-step reasoning trace"""
+
+    async def chat(self, messages, tools=None) -> dict:
+        """POST /api/chat - multi-turn with tool support"""
+
+    async def debate(self, topic, participants, max_rounds=1) -> dict:
+        """Multiple generate() calls for debate workflow"""
+
+    async def adversarial_review(self, output, context) -> dict:
+        """Single generate() call for critical review"""
 ```
 
 ---
