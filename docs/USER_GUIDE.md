@@ -456,7 +456,7 @@ A: Check that Ollama is running (`ollama serve`).
 A: Try being more specific in your request. Include context and constraints.
 
 **Q: I get "Model not found"**
-A: Download the model: `ollama pull qwen2.5:14b`
+A: Download the model: `ollama pull mistral:7b`
 
 **Q: How do I stop a long-running request?**
 A: Press `Ctrl+C` to interrupt.

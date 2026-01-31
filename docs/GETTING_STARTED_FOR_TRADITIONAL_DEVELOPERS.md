@@ -606,13 +606,13 @@ Ollama runs AI models locally on your computer:
 ollama serve
 
 # Download a model
-ollama pull qwen2.5:14b
+ollama pull mistral:7b
 
 # List models
 ollama list
 
 # Interactive chat (testing)
-ollama run qwen2.5:14b
+ollama run mistral:7b
 ```
 
 ### What is SQLite?

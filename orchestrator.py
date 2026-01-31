@@ -103,8 +103,8 @@ class Orchestrator:
         return {
             "ollama": {
                 "host": "http://localhost:11434",
-                "model": "qwen2.5:14b",
-                "timeout": 120,
+                "model": "mistral:7b",
+                "timeout": 300,
             },
             "ministries": {},
             "database": {"path": "data/country.db"},

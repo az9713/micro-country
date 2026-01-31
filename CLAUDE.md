@@ -737,7 +737,7 @@ def temp_db():
 |-------|-------|----------|
 | `ModuleNotFoundError` | Path not set | Add `sys.path.insert(0, ...)` |
 | `Connection refused` | Ollama not running | Start `ollama serve` |
-| `Model not found` | Model not downloaded | Run `ollama pull qwen2.5:14b` |
+| `Model not found` | Model not downloaded | Run `ollama pull mistral:7b` |
 | `Database locked` | Multiple instances | Close other instances |
 | `Timeout` | Request too complex | Simplify or increase timeout |
 
@@ -808,8 +808,8 @@ asyncio.run(inspect())
 # Ollama Integration
 ollama:
   host: "http://localhost:11434"
-  model: "qwen2.5:14b"
-  timeout: 120  # seconds
+  model: "mistral:7b"  # Mistral 7B - good balance of speed and quality
+  timeout: 300  # seconds (increased for debate/multi-call operations)
 
 # Database
 database:
@@ -818,7 +818,7 @@ database:
 # Ministries
 ministries:
   code:
-    path: "ministries/code"
+    path: "ministries/code/minister.py"
     specialists:
       - architect
       - coder

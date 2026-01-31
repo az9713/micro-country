@@ -350,7 +350,7 @@ Department responsible for information gathering. Searches for information, anal
 **Specialists**: Analyst, Writer, Searcher
 
 ### Model
-In AI context, the trained neural network that processes inputs and generates outputs. This system uses models through Ollama (e.g., `qwen2.5:14b`).
+In AI context, the trained neural network that processes inputs and generates outputs. This system uses models through Ollama (e.g., `mistral:7b`).
 
 **Related**: [LLM](#llm-large-language-model), [Ollama](#ollama)
 
@@ -583,7 +583,7 @@ A human-readable data format used for configuration. The system's configuration 
 ```yaml
 ollama:
   host: "http://localhost:11434"
-  model: "qwen2.5:14b"
+  model: "mistral:7b"
 ```
 
 ---

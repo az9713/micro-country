@@ -12,7 +12,7 @@ A hands-on tutorial with 15 progressive exercises. Work through these in order -
 - [ ] Ollama installed (`ollama --version`)
 - [ ] Project dependencies installed (`pip install -r requirements.txt`)
 - [ ] Ollama running (`ollama serve` in a separate terminal)
-- [ ] Model downloaded (`ollama pull qwen2.5:14b`)
+- [ ] Model downloaded (`ollama pull mistral:7b`)
 
 ### Starting the System
 

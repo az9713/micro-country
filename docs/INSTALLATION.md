@@ -196,7 +196,7 @@ ollama --version
 
 ### What is an AI Model?
 
-An AI model is the "brain" that processes your requests. We'll download a model called "qwen2.5:14b" which is good at coding and reasoning.
+An AI model is the "brain" that processes your requests. We recommend **mistral:7b** which provides a good balance of speed and quality, and fits in most GPUs (4GB+ VRAM).
 
 ### Start Ollama Server
 
@@ -223,25 +223,42 @@ ollama serve
 **Open a NEW terminal/command prompt** (keep the server running):
 
 ```bash
-ollama pull qwen2.5:14b
+ollama pull mistral:7b
 ```
 
-This will download about 9GB. It may take 10-30 minutes depending on your internet speed.
+This will download about 4GB. It may take 5-15 minutes depending on your internet speed.
 
 **What you'll see**:
 ```
 pulling manifest
-pulling 8de95da68dc4... 100% ████████████████████████ 9.0 GB
+pulling 8de95da68dc4... 100% ████████████████████████ 4.1 GB
 pulling 62fbfd9ed093... 100% ████████████████████████ 182 B
 ...
 success
 ```
 
-### Alternative: Smaller Model (Faster but Less Capable)
+### Alternative Models
 
-If you have limited RAM or want faster responses:
+Choose based on your GPU VRAM:
+
+| GPU VRAM | Model | Download Command |
+|----------|-------|------------------|
+| 4 GB | mistral:7b (default) | `ollama pull mistral:7b` |
+| 6-8 GB | qwen2.5:7b | `ollama pull qwen2.5:7b` |
+| 12+ GB | qwen2.5:14b | `ollama pull qwen2.5:14b` |
+| No GPU | llama3.2 | `ollama pull llama3.2` |
+
+If using a different model, edit `config.yaml`:
+```yaml
+ollama:
+  model: "your-model-name"
+```
+
+### Smaller Model (For Limited Hardware)
+
+If you have limited RAM or no GPU:
 ```bash
-ollama pull qwen2.5:7b
+ollama pull llama3.2
 ```
 
 Then edit `config.yaml` to use it:
@@ -406,7 +423,7 @@ python orchestrator.py
 ```
 Starting Micro-Country Orchestrator...
 ✓ Connected to Ollama at http://localhost:11434
-✓ Model qwen2.5:14b available
+✓ Model mistral:7b available
 ...
 Orchestrator ready!
 
@@ -465,7 +482,7 @@ python -m pip install -r requirements.txt
 
 **Solution**:
 ```bash
-ollama pull qwen2.5:14b
+ollama pull mistral:7b
 ```
 
 ### "Out of memory"
@@ -553,5 +570,5 @@ Delete the `venv` folder inside `micro-country`.
 
 ### Remove AI Models
 ```bash
-ollama rm qwen2.5:14b
+ollama rm mistral:7b
 ```

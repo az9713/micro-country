@@ -71,7 +71,7 @@ pip install pytest pytest-asyncio pytest-cov black flake8
 ollama serve
 
 # In another terminal, download the model
-ollama pull qwen2.5:14b
+ollama pull mistral:7b
 ```
 
 #### 5. Initialize Database

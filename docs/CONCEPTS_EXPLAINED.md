@@ -514,13 +514,13 @@ Ollama runs LLMs locally on your computer:
 ollama serve
 
 # Download a model
-ollama pull qwen2.5:14b
+ollama pull mistral:7b
 
 # List available models
 ollama list
 
 # Chat interactively
-ollama run qwen2.5:14b
+ollama run mistral:7b
 ```
 
 **API Usage (in code):**
@@ -528,7 +528,7 @@ ollama run qwen2.5:14b
 import ollama
 
 response = ollama.generate(
-    model="qwen2.5:14b",
+    model="mistral:7b",
     prompt="Write a function to calculate factorial"
 )
 print(response["response"])
@@ -553,7 +553,7 @@ user = "Review this login function"
 
 # Combined for the API call
 response = ollama.chat(
-    model="qwen2.5:14b",
+    model="mistral:7b",
     messages=[
         {"role": "system", "content": system},
         {"role": "user", "content": user}

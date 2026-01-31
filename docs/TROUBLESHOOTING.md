@@ -175,15 +175,15 @@ Connection refused
 
 **Symptom**:
 ```
-Model 'qwen2.5:14b' not found
+Model 'mistral:7b' not found
 ```
 
 **Cause**: The AI model hasn't been downloaded.
 
 **Solution**:
 ```bash
-# Download the model (may take 10-30 minutes)
-ollama pull qwen2.5:14b
+# Download the model (may take 5-15 minutes)
+ollama pull mistral:7b
 
 # Verify it's available
 ollama list
@@ -210,7 +210,7 @@ Model 'my-custom-model' not found
 2. **Edit config.yaml** to use an available model:
    ```yaml
    ollama:
-     model: "qwen2.5:14b"  # Use a model from the list
+     model: "mistral:7b"  # Use a model from the list
    ```
 
 ---
@@ -495,7 +495,7 @@ ollama run mistral:7b "Say hello" --verbose
 
 **Check if GPU is detected**:
 ```bash
-ollama run qwen2.5:14b
+ollama run mistral:7b
 # Type: /show info
 # Look for GPU information
 ```
@@ -688,7 +688,7 @@ python orchestrator.py
 | Error | Likely Cause | Quick Fix |
 |-------|--------------|-----------|
 | `Connection refused` | Ollama not running | `ollama serve` |
-| `Model not found` | Model not downloaded | `ollama pull qwen2.5:14b` |
+| `Model not found` | Model not downloaded | `ollama pull mistral:7b` |
 | `Module not found` | Dependencies missing | `pip install -r requirements.txt` |
 | `Permission denied` | File permissions | Check permissions, use venv |
 | `Database locked` | Multiple instances | Close other instances |

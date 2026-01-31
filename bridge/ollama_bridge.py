@@ -44,8 +44,8 @@ class OllamaConfig:
     """Configuration for Ollama connection."""
 
     host: str = "http://localhost:11434"
-    model: str = "qwen2.5:14b"
-    timeout: int = 120
+    model: str = "mistral:7b"
+    timeout: int = 300
     temperature: float = 0.7
     num_ctx: int = 8192
 

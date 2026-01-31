@@ -299,8 +299,8 @@ ollama:
 @dataclass
 class OllamaConfig:
     host: str = "http://localhost:11434"
-    model: str = "qwen2.5:14b"
-    timeout: int = 120
+    model: str = "mistral:7b"
+    timeout: int = 300
     temperature: float = 0.7       # Creativity (0=deterministic, 1=creative)
     num_ctx: int = 8192            # Context window size (tokens)
 ```
