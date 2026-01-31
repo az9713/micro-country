@@ -177,14 +177,15 @@ class Orchestrator:
         async with self.ollama:
             connected = await self.ollama.check_connection()
             if connected:
-                print(f"✓ Connected to Ollama at {self.config['ollama']['host']}")
+                print(f"[OK] Connected to Ollama at {self.config['ollama']['host']}")
                 models = await self.ollama.list_models()
-                if self.config["ollama"]["model"] in [m.split(":")[0] for m in models]:
-                    print(f"✓ Model {self.config['ollama']['model']} available")
+                configured_model = self.config["ollama"]["model"].split(":")[0]
+                if configured_model in [m.split(":")[0] for m in models]:
+                    print(f"[OK] Model {self.config['ollama']['model']} available")
                 else:
-                    print(f"⚠ Model {self.config['ollama']['model']} not found in: {models}")
+                    print(f"[WARNING] Model {self.config['ollama']['model']} not found in: {models}")
             else:
-                print(f"✗ Could not connect to Ollama at {self.config['ollama']['host']}")
+                print(f"[ERROR] Could not connect to Ollama at {self.config['ollama']['host']}")
 
         # Connect to knowledge server
         await self.connect_to_knowledge_server()
