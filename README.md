@@ -33,8 +33,12 @@ pip install -r requirements.txt
 # Step 3: Start Ollama (in a separate terminal)
 ollama serve
 
-# Step 4: Pull the AI model
-ollama pull qwen2.5:14b
+# Step 4: Pull an AI model (choose one)
+ollama pull mistral:7b        # Good general purpose (4GB)
+# OR
+ollama pull llama3.2          # Faster, smaller (2GB)
+# OR
+ollama pull qwen2.5:7b        # Recommended for best results (5GB)
 
 # Step 5: Run the system
 python orchestrator.py

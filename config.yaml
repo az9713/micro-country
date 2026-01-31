@@ -3,8 +3,13 @@
 # Ollama settings
 ollama:
   host: "http://localhost:11434"
-  model: "qwen2.5:14b"  # Single model for all tasks
-  timeout: 120  # seconds
+  model: "gpt-oss:20b"  # GPT-OSS 20B model
+  # Alternative models you can use:
+  #   - mistral:7b (4 GB, general purpose)
+  #   - llama3.2:latest (2 GB, faster)
+  #   - granite3.3:latest (5 GB, good for coding)
+  #   - deepseek-r1:7b (5 GB, good for reasoning)
+  timeout: 180  # seconds (increased for larger model)
 
 # Database settings
 database:
