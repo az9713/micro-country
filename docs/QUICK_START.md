@@ -7,7 +7,7 @@ Welcome! This guide will get you up and running with 10 hands-on examples in abo
 Make sure you have:
 1. Completed the [Installation Guide](INSTALLATION.md)
 2. Ollama running (`ollama serve` in a terminal)
-3. The model downloaded (`ollama pull qwen2.5:14b`)
+3. A model downloaded (choose based on your GPU - see [Ollama Commands Reference](#ollama-commands-reference) below)
 
 ## Starting the System
 
@@ -21,15 +21,15 @@ python orchestrator.py
 You should see:
 ```
 Starting Micro-Country Orchestrator...
-✓ Connected to Ollama at http://localhost:11434
-✓ Model qwen2.5:14b available
-Knowledge server ready for connection
-Ministry code ready for connection
-Ministry research ready for connection
-Ministry quality ready for connection
-Ministry operations ready for connection
-Ministry archives ready for connection
-Ministry communications ready for connection
+[OK] Connected to Ollama at http://localhost:11434
+[OK] Model mistral:7b available
+Knowledge server ready for connection at ...
+Ministry code ready for connection at ...
+Ministry research ready for connection at ...
+Ministry quality ready for connection at ...
+Ministry operations ready for connection at ...
+Ministry archives ready for connection at ...
+Ministry communications ready for connection at ...
 
 Orchestrator ready!
 
@@ -268,41 +268,90 @@ def login(username, password):
 
 ## Example 7: Starting a Debate
 
-**Goal**: Have specialists debate a technical decision.
+**Goal**: Have specialists debate a topic with different perspectives.
 
 **What to type**:
 ```
-/debate Should we use a SQL database or NoSQL database for a social media app?
+/debate money is the scorecard
 ```
 
 **What happens**:
-1. Multiple specialists (architect, coder, tester) participate
-2. Each presents their position with arguments
-3. They critique each other's positions
-4. A synthesis combines the best ideas
+1. Two specialists (architect, coder) participate by default
+2. Each presents their position following the 7-step Genius Protocol
+3. Progress is shown as each participant responds
+4. A synthesis combines the key insights
 
-**Expected output structure**:
+**Real example session**:
 ```
-Starting debate on: Should we use SQL or NoSQL...
-Participants: architect, coder, tester
+> /debate money is the scorecard
 
---- Round 1: Initial Positions ---
+Starting debate on: money is the scorecard
+Participants: architect, coder
+(Progress will be shown as each participant responds)
 
-Architect: "I recommend a hybrid approach..."
-Coder: "For rapid development, NoSQL gives flexibility..."
-Tester: "SQL databases are easier to test..."
+[Round 1/1] Gathering initial positions...
+  [1/3] architect is thinking...
+  [1/3] architect done.
+  [2/3] coder is thinking...
+  [2/3] coder done.
 
---- Round 2: Critiques ---
-[Each specialist critiques the others]
+[Synthesis] Creating final summary...
+  [3/3] Synthesizing all positions...
+  [3/3] Synthesis complete!
 
---- Debate Synthesis ---
-The strongest position combines:
-- Use PostgreSQL for structured data (users, relationships)
-- Use MongoDB for flexible content (posts, media metadata)
-- This hybrid approach balances consistency and flexibility...
+==================================================
+DEBATE POSITIONS
+==================================================
+
+--- architect (Round 1) ---
+### 1. OBSERVE
+The topic at hand is "money is the scorecard", which suggests a perspective
+that financial success or wealth is the primary measure of achievement...
+
+### 2. THINK
+When considering the statement "money is the scorecard," it's crucial to
+recognize its implications and potential consequences...
+
+### 3. REFLECT
+Upon reflection, it's essential to acknowledge that financial success is
+indeed a valuable outcome. However, it should not be the sole measure...
+
+### 4. CRITIQUE
+Criticizing this perspective, one can argue that an overemphasis on financial
+success may lead to unethical practices, increased income inequality...
+
+### 5. REFINE
+Refining this perspective, we should strive to create a balanced approach
+that prioritizes financial success while also considering ethics...
+
+### 6. ACT
+In practice, this could manifest through setting financial goals alongside
+non-financial objectives, adopting ethical business practices...
+
+### 7. VERIFY
+- Rationale explained: Yes
+- Trade-offs identified: Yes
+- Evidence cited: No (philosophical topic)
+
+--- coder (Round 1) ---
+[Similar 7-step reasoning from the coder's perspective...]
+
+==================================================
+SYNTHESIS
+==================================================
+### Agreement
+Both participants agree that money alone should not be the sole measure
+of success. A balanced approach is needed.
+
+### Disagreements
+Minor differences in emphasis on specific non-financial factors.
+
+### Recommendation
+Create architectures that support financial success but also encourage
+innovation, ethical decision-making, and social responsibility.
 ```
 
-**What you learned**: Debates surface trade-offs and lead to better decisions.
+**What you learned**: Debates surface trade-offs and lead to better decisions through structured reasoning.
 
 ---
 
@@ -446,8 +495,9 @@ ollama serve
 
 ### "Model not found"
 ```bash
-# Download the model
-ollama pull qwen2.5:14b
+# Download the model (choose one based on your GPU)
+ollama pull mistral:7b    # For 4GB GPU (recommended)
+ollama pull llama3.2      # For limited hardware
 ```
 
 ### Responses are slow
@@ -462,10 +512,91 @@ ollama pull qwen2.5:14b
 
 ---
 
+## Ollama Commands Reference
+
+These are the essential Ollama commands you'll need:
+
+### Starting Ollama
+
+```bash
+# Start the Ollama server (required before running orchestrator)
+ollama serve
+```
+
+### Managing Models
+
+```bash
+# List all downloaded models
+ollama list
+
+# Download a model (choose based on your GPU VRAM)
+ollama pull mistral:7b        # 4GB VRAM - recommended for most users
+ollama pull llama3.2          # 2GB - fastest, for limited hardware
+ollama pull qwen2.5:7b        # 6GB VRAM
+ollama pull deepseek-r1:7b    # 6GB VRAM - good for reasoning
+
+# Delete a model to free disk space
+ollama rm model-name:tag
+
+# Example: Delete a large model you no longer need
+ollama rm gpt-oss:20b
+```
+
+### Testing Models
+
+```bash
+# Quick test that a model works
+ollama run mistral:7b "Say hello"
+
+# Test with verbose output to see performance stats
+ollama run mistral:7b "What is 2+2?" --verbose
+
+# Look for "eval rate" in output - should be 15+ tokens/sec with GPU
+# If under 5 tokens/sec, model is running on CPU (too large for GPU)
+```
+
+### Checking System Status
+
+```bash
+# Check Ollama version
+ollama --version
+
+# See what models are currently loaded in memory
+ollama ps
+
+# Check GPU usage (NVIDIA only)
+nvidia-smi
+```
+
+### Model Size vs GPU VRAM Guide
+
+| GPU VRAM | Recommended Model | Download Command |
+|----------|-------------------|------------------|
+| 4 GB | mistral:7b | `ollama pull mistral:7b` |
+| 6-8 GB | qwen2.5:7b | `ollama pull qwen2.5:7b` |
+| 12+ GB | qwen2.5:14b | `ollama pull qwen2.5:14b` |
+| No GPU | llama3.2 | `ollama pull llama3.2` |
+
+**Important**: If a model is larger than your GPU's VRAM, it will run mostly on CPU and be very slow (4-5 tokens/sec instead of 15-30 tokens/sec).
+
+### Configuration
+
+The model used by the orchestrator is set in `config.yaml`:
+
+```yaml
+ollama:
+  host: "http://localhost:11434"
+  model: "mistral:7b"  # Change this to use a different model
+  timeout: 300  # seconds
+```
+
+---
+
 Congratulations! You've completed the Quick Start Guide. You now understand:
 - How requests are routed to specialists
 - How to get code, designs, and reviews
 - How to use debates for decisions
 - How to store and recall knowledge
+- How to manage Ollama models
 
 Ready for more? Continue to the [User Guide](USER_GUIDE.md)!
