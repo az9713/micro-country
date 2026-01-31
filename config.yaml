@@ -3,13 +3,12 @@
 # Ollama settings
 ollama:
   host: "http://localhost:11434"
-  model: "gpt-oss:20b"  # GPT-OSS 20B model
+  model: "mistral:7b"  # Mistral 7B - good balance of speed and quality
   # Alternative models you can use:
-  #   - mistral:7b (4 GB, general purpose)
   #   - llama3.2:latest (2 GB, faster)
   #   - granite3.3:latest (5 GB, good for coding)
   #   - deepseek-r1:7b (5 GB, good for reasoning)
-  timeout: 180  # seconds (increased for larger model)
+  timeout: 120  # seconds
 
 # Database settings
 database:
