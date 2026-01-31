@@ -1,0 +1,79 @@
+# Micro-Country of Geniuses Configuration
+
+# Ollama settings
+ollama:
+  host: "http://localhost:11434"
+  model: "qwen2.5:14b"  # Single model for all tasks
+  timeout: 120  # seconds
+
+# Database settings
+database:
+  path: "data/country.db"
+
+# Ministry server configurations
+ministries:
+  code:
+    path: "ministries/code/minister.py"
+    specialists:
+      - architect
+      - coder
+      - debugger
+  research:
+    path: "ministries/research/minister.py"
+    specialists:
+      - analyst
+      - writer
+      - searcher
+  quality:
+    path: "ministries/quality/minister.py"
+    specialists:
+      - tester
+      - auditor
+      - validator
+  operations:
+    path: "ministries/operations/minister.py"
+    specialists:
+      - file_manager
+      - shell_runner
+      - deployer
+  archives:
+    path: "ministries/archives/minister.py"
+    specialists:
+      - memory
+      - indexer
+  communications:
+    path: "ministries/communications/minister.py"
+    specialists:
+      - messenger
+      - scheduler
+
+# Shared knowledge server
+knowledge_server:
+  path: "shared/knowledge_server.py"
+
+# Genius protocol settings
+genius:
+  prompts_dir: "genius/prompts"
+  reasoning_steps:
+    - OBSERVE
+    - THINK
+    - REFLECT
+    - CRITIQUE
+    - REFINE
+    - ACT
+    - VERIFY
+
+# Evidence court settings
+evidence_court:
+  # Evidence strength ranking (1=strongest)
+  evidence_ranking:
+    empirical: 1      # Benchmarks, tests, data
+    precedent: 2      # What worked before
+    consensus: 3      # Multiple specialists agree
+    theoretical: 4    # Logical arguments
+    intuition: 5      # Gut feeling
+
+# Logging
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
