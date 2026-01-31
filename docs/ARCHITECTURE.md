@@ -876,11 +876,227 @@ def strength_score(evidence):
 **Rationale**: Simplicity, consistent behavior
 **Trade-off**: Can't optimize per specialist
 
-### Why MCP Protocol?
+### Why MCP Protocol for Ministries?
 
-**Decision**: Use Model Context Protocol
-**Rationale**: Standard protocol, future-proof, tool support
-**Trade-off**: More complex than direct API calls
+**Decision**: Implement each ministry as an MCP (Model Context Protocol) server
+
+**What is MCP?**
+
+MCP is a standard protocol (developed by Anthropic) for communication between AI applications and external tools/resources. It uses JSON-RPC 2.0 over STDIO.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    MCP ARCHITECTURE PATTERN                         │
+│                                                                     │
+│   ┌─────────────────┐         JSON-RPC 2.0        ┌──────────────┐ │
+│   │   MCP HOST      │◄────────────────────────────►│  MCP SERVER  │ │
+│   │  (Orchestrator) │           STDIO             │  (Ministry)  │ │
+│   │                 │                             │              │ │
+│   │ • Sends requests│                             │ • Exposes    │ │
+│   │ • Calls tools   │                             │   tools      │ │
+│   │ • Reads resources                             │ • Provides   │ │
+│   │                 │                             │   resources  │ │
+│   └─────────────────┘                             └──────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Why Not Just Use Direct Function Calls?**
+
+Alternative approaches we could have used:
+
+```
+OPTION A: Direct Function Calls (What we could have done)
+─────────────────────────────────────────────────────────
+┌─────────────────────────────────────────────────────────────────────┐
+│                         orchestrator.py                              │
+│                                                                     │
+│  from ministries.code import architect, coder, debugger             │
+│  from ministries.research import analyst, writer                    │
+│                                                                     │
+│  result = architect.design(request)  # Direct call                  │
+│  result = coder.implement(spec)      # Direct call                  │
+└─────────────────────────────────────────────────────────────────────┘
+
+  Pros: Simple, fast, easy to debug
+  Cons: Tightly coupled, hard to extend, no standard interface
+
+
+OPTION B: MCP Servers (What we chose)
+─────────────────────────────────────────────────────────────────────
+┌─────────────────────────────────────────────────────────────────────┐
+│     Orchestrator          Code Ministry           Research Ministry │
+│    (MCP Host)             (MCP Server)            (MCP Server)      │
+│         │                      │                       │            │
+│         │  list_tools()        │                       │            │
+│         │─────────────────────►│                       │            │
+│         │  [architect_design,  │                       │            │
+│         │   coder_implement]   │                       │            │
+│         │◄─────────────────────│                       │            │
+│         │                      │                       │            │
+│         │  call_tool(          │                       │            │
+│         │    "architect_design"│                       │            │
+│         │    {spec: "..."})    │                       │            │
+│         │─────────────────────►│                       │            │
+│         │  {result: "..."}     │                       │            │
+│         │◄─────────────────────│                       │            │
+└─────────────────────────────────────────────────────────────────────┘
+
+  Pros: Decoupled, standard interface, extensible, future-proof
+  Cons: More complex, slight overhead
+```
+
+**Benefits of MCP for This Application**
+
+1. **Modularity and Isolation**
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Each ministry is a separate process with its own:                  │
+│  • Memory space (no leaks between ministries)                       │
+│  • Error handling (one crash doesn't kill others)                   │
+│  • Dependencies (can use different libraries)                       │
+│                                                                     │
+│  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐        │
+│  │   Code   │   │ Research │   │ Quality  │   │   Ops    │        │
+│  │ Ministry │   │ Ministry │   │ Ministry │   │ Ministry │        │
+│  │          │   │          │   │          │   │          │        │
+│  │ Process 1│   │ Process 2│   │ Process 3│   │ Process 4│        │
+│  └──────────┘   └──────────┘   └──────────┘   └──────────┘        │
+│       │              │              │              │               │
+│       └──────────────┴──────────────┴──────────────┘               │
+│                              │                                      │
+│                    ┌─────────▼─────────┐                           │
+│                    │   Orchestrator    │                           │
+│                    │   (MCP Host)      │                           │
+│                    └───────────────────┘                           │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+2. **Standard Tool/Resource Interface**
+```
+Every MCP server exposes the same interface:
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                    MCP SERVER INTERFACE                             │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  TOOLS (actions the server can perform)                             │
+│  ──────────────────────────────────────                             │
+│  list_tools() → [                                                   │
+│    { name: "architect_design",                                      │
+│      description: "Design system architecture",                     │
+│      inputSchema: { type: "object", properties: {...} }             │
+│    },                                                               │
+│    { name: "coder_implement", ... },                                │
+│    { name: "debugger_fix", ... }                                    │
+│  ]                                                                  │
+│                                                                     │
+│  call_tool(name, arguments) → result                                │
+│                                                                     │
+│  RESOURCES (data the server provides)                               │
+│  ─────────────────────────────────────                              │
+│  list_resources() → [                                               │
+│    { uri: "ministry://code/specialists", ... },                     │
+│    { uri: "ministry://code/recent-tasks", ... }                     │
+│  ]                                                                  │
+│                                                                     │
+│  read_resource(uri) → content                                       │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+3. **Future Extensibility**
+```
+Adding a new ministry is plug-and-play:
+
+BEFORE:                              AFTER:
+─────────────────────────────────────────────────────────────────────
+┌──────────┐  ┌──────────┐          ┌──────────┐  ┌──────────┐
+│   Code   │  │ Research │          │   Code   │  │ Research │
+└────┬─────┘  └────┬─────┘          └────┬─────┘  └────┬─────┘
+     └──────┬──────┘                     │             │
+            │                            │  ┌──────────┴──────────┐
+     ┌──────▼──────┐                     │  │                     │
+     │ Orchestrator│               ┌─────▼──▼──┐  ┌──────────────┐
+     └─────────────┘               │Orchestrator│  │  NEW: Legal  │
+                                   └────────────┘  │   Ministry   │
+                                         ▲         └──────────────┘
+                                         │                │
+                                         └────────────────┘
+
+No code changes to orchestrator needed - just:
+1. Create ministries/legal/minister.py
+2. Add to config.yaml
+3. Restart
+```
+
+4. **Alignment with AI Ecosystem**
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    MCP ECOSYSTEM COMPATIBILITY                      │
+│                                                                     │
+│  MCP is supported by:                                               │
+│  • Claude Desktop                                                   │
+│  • Claude Code (this tool!)                                         │
+│  • Other AI assistants adopting the standard                        │
+│                                                                     │
+│  This means ministries could potentially be:                        │
+│  • Used by other MCP-compatible AI systems                          │
+│  • Extended with third-party MCP servers                            │
+│  • Integrated into larger AI workflows                              │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Current Implementation Status**
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  NOTE: In the current implementation, ministries are defined as     │
+│  MCP servers but the orchestrator uses a simplified direct          │
+│  approach for the initial version:                                  │
+│                                                                     │
+│  CURRENT:                                                           │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ Orchestrator                                                 │   │
+│  │   │                                                          │   │
+│  │   ├─► Ollama Bridge (for LLM calls)                          │   │
+│  │   │     └─► Uses specialist prompts from genius/prompts/     │   │
+│  │   │                                                          │   │
+│  │   └─► Ministry definitions (for routing/display)             │   │
+│  │         └─► config.yaml lists ministries and specialists     │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│  FUTURE (full MCP implementation):                                  │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ Orchestrator (MCP Host)                                      │   │
+│  │   │                                                          │   │
+│  │   ├─► Code Ministry (MCP Server process)                     │   │
+│  │   │     ├─► architect tool                                   │   │
+│  │   │     ├─► coder tool                                       │   │
+│  │   │     └─► debugger tool                                    │   │
+│  │   │                                                          │   │
+│  │   ├─► Research Ministry (MCP Server process)                 │   │
+│  │   │     └─► ...                                              │   │
+│  │   │                                                          │   │
+│  │   └─► Knowledge Server (MCP Server process)                  │   │
+│  │         └─► Shared database access                           │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│  The MCP server code exists in ministries/*/minister.py but        │
+│  full inter-process communication is planned for future versions.  │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Trade-offs Acknowledged**
+
+| Benefit | Trade-off |
+|---------|-----------|
+| Modularity | More complex than direct calls |
+| Standard interface | Learning curve for contributors |
+| Process isolation | IPC overhead |
+| Future extensibility | Over-engineering for simple use cases |
+| Ecosystem alignment | Dependency on MCP SDK |
+
+**Summary**: MCP was chosen to create a clean, extensible architecture that aligns with the emerging AI tool ecosystem, even though a simpler direct-call approach would work for the current scope. This is a deliberate investment in future flexibility.
 
 ### Why SQLite?
 
